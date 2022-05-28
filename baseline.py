@@ -1,3 +1,5 @@
+import time
+
 import torch
 import torch.nn as nn
 import torchvision
@@ -6,12 +8,13 @@ from torch.optim.lr_scheduler import MultiStepLR
 import argparse
 from tqdm import tqdm
 from model.resnet import ResNet18
-
+from util import save_log
 
 def train(model, train_loader, optimizer, scheduler, num_epochs=45):
     # train
     print("Start training with optimizer ...")
     model.train()
+    loss_list = []
     for epoch in range(num_epochs):
         loss_total = 0.0
         bar = tqdm(train_loader, total=len(train_loader), ncols=0)
@@ -27,12 +30,15 @@ def train(model, train_loader, optimizer, scheduler, num_epochs=45):
             if i % 20 == 19:
                 description = 'epoch: %d, iters: %5d, loss: %.3f' % (epoch + 1, i + 1, loss_total / 20)
                 bar.set_description(desc=description)
+                loss_list.append(loss_total)
                 loss_total = 0.0
+
         scheduler.step()
     print("Training Finished!")
+    return loss_list
 
 
-def test(model: nn.Module, test_loader):
+def test(model, test_loader):
     # test
     model.eval()
     size = len(test_loader.dataset)
@@ -47,6 +53,7 @@ def test(model: nn.Module, test_loader):
     print('\nTest set: Accuracy: {}/{} ({:.2f}%)\n'.format(
         correct, size,
         100 * correct / size))
+    return correct / size
 
 
 if __name__ == "__main__":
@@ -73,5 +80,10 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
     scheduler = MultiStepLR(optimizer=optimizer, milestones=[15, 30], gamma=0.1)
-    train(model, train_loader, optimizer, scheduler)
-    test(model, test_loader)
+    starttime = time.time()  # 当前时间
+    loss_list = train(model, train_loader, optimizer, scheduler)
+    endtime = time.time()#结束时间
+    train_time = endtime-starttime
+    print("Training time: {}".format(train_time))
+    acc = test(model, test_loader)
+    save_log('./log/baseline.log', loss_list, acc, train_time)
