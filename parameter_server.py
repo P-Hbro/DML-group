@@ -21,7 +21,7 @@ class ParameterServer(object):
      The parameter server (PS) updates model parameters with gradients from the workers
      and sends the updated parameters back to the workers.
     """
-    def __init__(self, model, num_workers, lr):
+    def __init__(self, num_workers, lr):
         self.lock = threading.Lock()
         self.future_model = torch.futures.Future()
         self.num_workers = num_workers
@@ -30,7 +30,7 @@ class ParameterServer(object):
         # zero gradients
         for p in self.model.parameters():
             p.grad = torch.zeros_like(p)
-        self.optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
+        self.optimizer = optim.SGD(self.model.parameters(), lr=lr, momentum=0.9, weight_decay=5e-4)
         self.scheduler = MultiStepLR(optimizer=self.optimizer, milestones=[15, 30], gamma=0.1)
 
     def get_model(self):
@@ -111,7 +111,7 @@ def run_worker(ps_rref, rank, num_epochs):
 
             model = rpc.rpc_sync(to=ps_rref.owner(),
                              func=ParameterServer.update_and_fetch_model,
-                             args=(ps_rref, [p.grad for p in model.cpu().parameters()], rank)
+                             args=(ps_rref, [p.grad for p in model.cpu().parameters()])
                              ).to(device)
             if i % 20 == 19:  # print every 2000 mini-batches
                 print('Device: %d epoch: %d, iters: %5d, loss: %.3f' % (
@@ -158,7 +158,7 @@ def main():
         rpc.init_rpc(f"PS{args.rank}", rank=args.rank, world_size=args.world_size, rpc_backend_options=options)
         print(f"PS{args.rank} initialized")
 
-        ps_rref = rpc.RRef(ParameterServer(args.model, args.world_size, args.lr))
+        ps_rref = rpc.RRef(ParameterServer(args.world_size, args.lr))
 
         futs = []
         for r in range(1, args.world_size):
