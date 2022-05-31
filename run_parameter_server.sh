@@ -1,0 +1,9 @@
+python parameter_server.py --world_size 9 --rank 0 &
+python parameter_server.py --world_size 9 --rank 1 &
+python parameter_server.py --world_size 9 --rank 2 &
+python parameter_server.py --world_size 9 --rank 3 &
+python parameter_server.py --world_size 9 --rank 4 &
+python parameter_server.py --world_size 9 --rank 5 &
+python parameter_server.py --world_size 9 --rank 6 &
+python parameter_server.py --world_size 9 --rank 7 &
+python parameter_server.py --world_size 9 --rank 8 &
